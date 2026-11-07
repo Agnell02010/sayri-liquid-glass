@@ -1,0 +1,18 @@
+# cache e artefatti
+__pycache__/
+*.pyc
+*.bak
+*.bak-*
+*.log
+screenshots/
+*.png
+# asset pesanti non necessari al tema
+web/
+sounds/
+references/
+skills/
+plugins/
+# dati locali
+policies.json
+.env
+*.env
