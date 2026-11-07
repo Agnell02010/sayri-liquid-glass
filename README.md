@@ -21,6 +21,15 @@ droplet coming from the top edge.
 - **Settings window** — same ramp as a `linear-gradient` on a transparent background.
 - **Smaller response text** — 24 px instead of 26 px.
 
+## The orb is off by default
+
+The floating WebKit orb next to the bar is gone. It was a second WebKit process tree for a
+decoration: the bar already has its own mic button, and the hotkey still works. The window
+is narrower by the orb slot, and nothing else changes.
+
+To bring it back, start Sayri with `SAYRI_SHOW_ORB=1`. `SAYRI_DEV_NO_ORB=1` still forces it
+off, as used by the headless preview.
+
 ## Install
 
 The theme lives in the Sayri Python package, so it is installed by copying the files over

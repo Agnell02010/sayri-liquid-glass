@@ -55,10 +55,13 @@ class SayriOverlay:
         self.app = app
         self.cfg = app.cfg
 
-        # Development escape hatch: render the Liquid Glass cajita without
-        # WebKit, so the UI can be checked safely on machines where the orb
-        # renderer is suspected of instability.
-        self._no_orb = os.environ.get("SAYRI_DEV_NO_ORB") == "1"
+        # The floating WebKit orb is off by default: the bar already carries its
+        # own mic button, so the orb only added a second WebKit process tree for
+        # a decoration. SAYRI_SHOW_ORB=1 brings it back; SAYRI_DEV_NO_ORB=1 keeps
+        # it off explicitly (used by the headless preview).
+        self._no_orb = os.environ.get("SAYRI_SHOW_ORB", "0") != "1"
+        if os.environ.get("SAYRI_DEV_NO_ORB") == "1":
+            self._no_orb = True
 
         orb_size = self.cfg.get_int("ui", "orb_size")
         if orb_size < 100 or orb_size > 300:
@@ -205,6 +208,8 @@ class SayriOverlay:
 
     def _orb_set_state(self, state: str, opts: dict | None = None) -> None:
         opts = opts or {}
+        if self.web is None:  # orb removed: nothing to drive, nothing to queue
+            return
         if not self._orb_ready:
             self._orb_pending.append((state, opts))
             return
