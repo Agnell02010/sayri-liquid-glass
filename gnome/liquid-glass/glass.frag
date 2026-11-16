@@ -8,6 +8,9 @@
 // strength: its widget version washed across the long edge.
 #define DOCK_DISP_BOOST 1.25
 #define DOCK_LIGHT_BOOST 1.15
+// With the cursor light on, the edge keeps this much of its light when the
+// pointer is far away, so the rim never goes completely dark.
+#define CURSOR_MIN_LIGHT 0.35
 #define WIDGET_REFRACT_THICKNESS 35.0  // widget default, px
 #define WIDGET_CHROMA_FRACTION 0.35    // widget: chroma * thickness * 0.35
 uniform sampler2D cogl_sampler0; // Layer 0: the sharp capture
@@ -55,6 +58,12 @@ uniform float shadow_intensity;
 uniform float shadow_max_radius;
 uniform float padding;
 uniform float isDock;
+// Cursor-following edge light: position in uv (0..1) of the surface's own
+// space, reach in pixels, and 0..1 to blend it in (0 = feature off).
+uniform float cursor_x;
+uniform float cursor_y;
+uniform float cursor_radius;
+uniform float cursor_light;
 
 // The sub-rect of the actor that layer 1 holds, blurred, in actor-local px.
 // Everything the shader draws lies inside it. w/h < 1 means the whole actor,
@@ -1005,6 +1014,17 @@ void main() {
     float addedLight = (specularLight + finalRimLight + idleRim + sheenLight) * surface_light_enabled;
     vec3 addedLightVec = vec3(addedLight);
 #endif
+
+    // The edge light follows the pointer: the rim, the specular and the
+    // widget's corner glow all pass through this gate, strongest where the
+    // cursor is and at CURSOR_MIN_LIGHT further away. With cursor_light at 0
+    // the gate is exactly 1.0, so the feature costs nothing when off.
+    float cursorDistPx = length((uv - vec2(cursor_x, cursor_y)) * resolution);
+    float cursorFalloff = 1.0 - smoothstep(cursor_radius * 0.30, cursor_radius, cursorDistPx);
+    float cursorGate = mix(1.0, mix(CURSOR_MIN_LIGHT, 1.0, cursorFalloff),
+                           clamp(cursor_light, 0.0, 1.0));
+    addedLightVec *= cursorGate;
+    addedLight *= cursorGate;
 
     // Screen blend, which cannot blow out a white background the way adding
     // does.
