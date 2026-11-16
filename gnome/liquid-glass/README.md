@@ -66,6 +66,18 @@ GSETTINGS_SCHEMA_DIR=~/.local/share/gnome-shell/extensions/liquid-glass@thinking
   gsettings set org.gnome.shell.extensions.liquid-glass@thinkingcoding1231.gmail.com glass-cursor-light false
 ```
 
+## Serve un logout per il lato JS
+
+Lo shader si aggiorna con `gnome-extensions disable/enable`: i `.frag` sono letti
+da disco a ogni `initialize()`. **Il codice JS no**: GNOME Shell tiene in memoria
+il grafo dei moduli dell'estensione, quindi disable/enable reinstanzia la classe
+ma non rilegge `extension.js` ne' i file che importa.
+
+Una modifica a `cursorLight.js`, `material.js`, `glassRenderer.js`,
+`backdropGlass.js`, `diagnostics/glass.js` o `extension.js` richiede un
+**logout** (o un riavvio della shell). Si riconosce perche' il comportamento non
+cambia affatto, senza nessun errore nel journal.
+
 ## Due trappole da conoscere
 
 **1. Il path dconf non contiene l'UUID.** Lo schema dichiara
