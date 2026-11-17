@@ -33,8 +33,22 @@ resta a `CURSOR_MIN_LIGHT` (0.35) per non spegnersi del tutto.
 
 Quattro uniform — `cursor_x`, `cursor_y` (uv 0..1 dello spazio della
 superficie), `cursor_radius` (px), `cursor_light` (0..1) — alimentati da un
-modulo che ascolta `motion-event` sullo stage, a ~30 Hz e solo mentre il mouse
+modulo che ascolta `captured-event` sullo stage, a ~30 Hz e solo mentre il mouse
 si muove.
+
+Il cancello da solo non basta: la luce dei widget e' debole (`lip light * 0.10`),
+quindi modulare solo quella non si vede su niente tranne il dock, che usa la
+luce originale di ryohsuke. Per questo c'e' anche un **riflesso additivo**:
+un alone soffice appena dentro il bordo, solo dove sta il puntatore.
+
+Le manopole stanno tutte nello shader, e si cambiano con un reload:
+
+```glsl
+#define CURSOR_MIN_LIGHT    0.35   // luce residua quando il cursore e' lontano
+#define CURSOR_REACH_SCALE  1.6    // moltiplica il raggio arrivato dal JS
+#define CURSOR_RIM_WIDTH    26.0   // spessore dell'alone, in px
+#define CURSOR_GAIN         0.35   // intensita' dell'alone
+```
 
 Con `cursor_light = 0` il cancello vale esattamente 1.0, quindi **il solo
 shader è retrocompatibile**: senza il lato JS disegna quello che disegnava

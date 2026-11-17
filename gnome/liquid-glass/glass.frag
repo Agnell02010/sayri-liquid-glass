@@ -11,6 +11,12 @@
 // With the cursor light on, the edge keeps this much of its light when the
 // pointer is far away, so the rim never goes completely dark.
 #define CURSOR_MIN_LIGHT 0.35
+// Multiplies the radius the JS sends, and the width of the glow it adds. Both
+// live here on purpose: editing the shader needs a reload, editing the JS needs
+// a logout.
+#define CURSOR_REACH_SCALE 1.6
+#define CURSOR_RIM_WIDTH 26.0
+#define CURSOR_GAIN 0.35
 #define WIDGET_REFRACT_THICKNESS 35.0  // widget default, px
 #define WIDGET_CHROMA_FRACTION 0.35    // widget: chroma * thickness * 0.35
 uniform sampler2D cogl_sampler0; // Layer 0: the sharp capture
@@ -1020,11 +1026,19 @@ void main() {
     // cursor is and at CURSOR_MIN_LIGHT further away. With cursor_light at 0
     // the gate is exactly 1.0, so the feature costs nothing when off.
     float cursorDistPx = length((uv - vec2(cursor_x, cursor_y)) * resolution);
-    float cursorFalloff = 1.0 - smoothstep(cursor_radius * 0.30, cursor_radius, cursorDistPx);
-    float cursorGate = mix(1.0, mix(CURSOR_MIN_LIGHT, 1.0, cursorFalloff),
-                           clamp(cursor_light, 0.0, 1.0));
+    float cursorReach = cursor_radius * CURSOR_REACH_SCALE;
+    float cursorFalloff = 1.0 - smoothstep(cursorReach * 0.30, cursorReach, cursorDistPx);
+    float cursorAmount = clamp(cursor_light, 0.0, 1.0);
+    float cursorGate = mix(1.0, mix(CURSOR_MIN_LIGHT, 1.0, cursorFalloff), cursorAmount);
     addedLightVec *= cursorGate;
-    addedLight *= cursorGate;
+    // An explicit highlight, additive rather than a gate: the widget's own edge
+    // light is faint (lip light * 0.10), so scaling it alone is invisible on
+    // anything but the dock. This is a soft glow just inside the outline, only
+    // where the pointer is, and it is 0 when the feature is off.
+    float cursorInside = 1.0 - smoothstep(0.0, CURSOR_RIM_WIDTH, max(-d, 0.0));
+    addedLightVec += vec3(1.0, 0.98, 0.94) *
+        (cursorInside * insideMask * cursorFalloff * cursorAmount * CURSOR_GAIN);
+    addedLight = dot(addedLightVec, vec3(0.2126, 0.7152, 0.0722));
 
     // Screen blend, which cannot blow out a white background the way adding
     // does.

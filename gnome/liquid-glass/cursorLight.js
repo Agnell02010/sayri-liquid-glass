@@ -55,9 +55,11 @@ function _apply() {
         glass.setCursorLight(ux, uy, RADIUS_PX);
         touched++;
     });
-    // One line per session: console.debug never reaches the journal, so it goes
-    // to a file as well, which is also how this was traced the first time.
-    if (!_announced) {
+    // One line per session, and only from a pass that actually resolved a
+    // position: the first idle pass runs before the surfaces are mapped and
+    // would report an empty run. console.debug never reaches the journal, so it
+    // goes to a file too, which is how the plumbing was traced.
+    if (!_announced && sample !== null) {
         _announced = true;
         const line = `cursor light: ${touched}/${total} surface(s) updated, ` +
             `pointer at uv ${sample ?? 'n/a'}`;
