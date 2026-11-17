@@ -13,12 +13,11 @@
 // Together they read as the two arms of an X, not as an even dimming.
 // A line on the outline, not a glow inside the shape: the band is a few pixels
 // wide and centred on the edge, so the interior stays untouched.
-#define CURSOR_RIM_WIDTH   7.0
+#define CURSOR_RIM_WIDTH   10.0
 #define CURSOR_BACK_LOBE   0.35
-// Additive, but only a touch: the gate above already does the work, and this is
-// just enough to keep the rim readable on the surfaces whose own edge light is
-// faint (Control Center, panel menus).
-#define CURSOR_GAIN        0.12
+// This line is now what the eye sees: the gate below only touches the same
+// band, so it stays a highlight on the edge instead of a pulse inside.
+#define CURSOR_GAIN        0.30
 // Multiplies the radius the JS sends, and the width of the glow it adds. Both
 // live here on purpose: editing the shader needs a reload, editing the JS needs
 // a logout.
@@ -1042,8 +1041,12 @@ void main() {
     float cursorInBox = step(-0.05, cursor_x) * step(cursor_x, 1.05) *
                         step(-0.05, cursor_y) * step(cursor_y, 1.05);
     float cursorAmount = clamp(cursor_light, 0.0, 1.0) * cursorInBox;
+    // The band on the outline, shared by the gate and the highlight: the gate
+    // is applied only here, so the interior keeps its own light instead of
+    // lighting up when the pointer passes.
+    float cursorEdge = (1.0 - smoothstep(0.0, CURSOR_RIM_WIDTH, abs(d))) * insideMask;
     float cursorGate = mix(1.0, mix(CURSOR_MIN_LIGHT, 1.0, cursorFalloff), cursorAmount);
-    addedLightVec *= cursorGate;
+    addedLightVec *= mix(1.0, cursorGate, cursorEdge);
     // surfaceDir points straight out of the outline, so its dot with the
     // direction to the pointer is 1 on the near side and -1 on the far one.
     // Squaring narrows each lobe into a spot instead of half the outline, and
@@ -1051,10 +1054,11 @@ void main() {
     vec2 toPointerPx = (vec2(cursor_x, cursor_y) - uv) * resolution;
     vec2 pointerDir = toPointerPx / max(length(toPointerPx), 1e-4);
     float facing = dot(surfaceDir, pointerDir);
-    float rimLobe = max(facing, 0.0) + CURSOR_BACK_LOBE * max(-facing, 0.0);
-    rimLobe *= rimLobe;
-    float cursorRim = (1.0 - smoothstep(0.0, CURSOR_RIM_WIDTH, abs(d))) *
-        insideMask * rimLobe * cursorFalloff * cursorAmount;
+    // Cubed, so it is a spot rather than a flare along the whole side: the
+    // dock's short ends were lighting up far too much when the pointer crossed.
+    float rimLobe = pow(max(facing, 0.0), 3.0) +
+        CURSOR_BACK_LOBE * pow(max(-facing, 0.0), 3.0);
+    float cursorRim = cursorEdge * rimLobe * cursorFalloff * cursorAmount;
     addedLightVec += vec3(1.0, 0.98, 0.94) * cursorRim * CURSOR_GAIN;
     addedLight = dot(addedLightVec, vec3(0.2126, 0.7152, 0.0722));
 
