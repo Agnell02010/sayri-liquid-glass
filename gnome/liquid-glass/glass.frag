@@ -1045,9 +1045,9 @@ void main() {
     // pixels: the sign distance d is not in pixels on every path (the dock comes
     // through the shape texture), and using abs(d) there spread the band across
     // the whole interior. edgeDistPx is positive inside, negative outside.
-    vec2 cursorHalfBox = box_size * 0.5;
-    float edgeDistPx = -max(abs(local_pos.x) - cursorHalfBox.x,
-                            abs(local_pos.y) - cursorHalfBox.y);
+    // box_size is already the half extent: sdRoundRect compares it to abs(p).
+    float edgeDistPx = -max(abs(local_pos.x) - box_size.x,
+                            abs(local_pos.y) - box_size.y);
     float cursorEdge = (1.0 - smoothstep(0.0, CURSOR_RIM_WIDTH, edgeDistPx)) * insideMask;
     float cursorGate = mix(1.0, mix(CURSOR_MIN_LIGHT, 1.0, cursorFalloff), cursorAmount);
     addedLightVec *= mix(1.0, cursorGate, cursorEdge);
