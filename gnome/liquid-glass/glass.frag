@@ -8,9 +8,16 @@
 // strength: its widget version washed across the long edge.
 #define DOCK_DISP_BOOST 1.25
 #define DOCK_LIGHT_BOOST 1.15
-// The edge light is scaled by how close the pointer is: full where it is, and
-// CURSOR_MIN_LIGHT far away, so nothing goes completely dark. This is the
-// strength the dock had the first time round.
+// The highlight runs around the rim the way light does on real glass: a lobe
+// where the outline faces the pointer, and a weaker one diagonally opposite.
+// Together they read as the two arms of an X, not as an even dimming.
+// A line on the outline, not a glow inside the shape: the band is a few pixels
+// wide and centred on the edge, so the interior stays untouched.
+#define CURSOR_RIM_WIDTH   7.0
+#define CURSOR_BACK_LOBE   0.35
+// Additive, because a faint surface (Control Center) has almost no edge light
+// of its own to scale. High because the band it lights is narrow.
+#define CURSOR_GAIN        0.95
 // Multiplies the radius the JS sends, and the width of the glow it adds. Both
 // live here on purpose: editing the shader needs a reload, editing the JS needs
 // a logout.
@@ -1036,6 +1043,18 @@ void main() {
     float cursorAmount = clamp(cursor_light, 0.0, 1.0) * cursorInBox;
     float cursorGate = mix(1.0, mix(CURSOR_MIN_LIGHT, 1.0, cursorFalloff), cursorAmount);
     addedLightVec *= cursorGate;
+    // surfaceDir points straight out of the outline, so its dot with the
+    // direction to the pointer is 1 on the near side and -1 on the far one.
+    // Squaring narrows each lobe into a spot instead of half the outline, and
+    // the back lobe is weaker, which is what makes it read as an X.
+    vec2 toPointerPx = (vec2(cursor_x, cursor_y) - uv) * resolution;
+    vec2 pointerDir = toPointerPx / max(length(toPointerPx), 1e-4);
+    float facing = dot(surfaceDir, pointerDir);
+    float rimLobe = max(facing, 0.0) + CURSOR_BACK_LOBE * max(-facing, 0.0);
+    rimLobe *= rimLobe;
+    float cursorRim = (1.0 - smoothstep(0.0, CURSOR_RIM_WIDTH, abs(d))) *
+        insideMask * rimLobe * cursorFalloff * cursorAmount;
+    addedLightVec += vec3(1.0, 0.98, 0.94) * cursorRim * CURSOR_GAIN;
     addedLight = dot(addedLightVec, vec3(0.2126, 0.7152, 0.0722));
 
     // Screen blend, which cannot blow out a white background the way adding
