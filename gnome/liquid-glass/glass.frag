@@ -15,9 +15,10 @@
 // wide and centred on the edge, so the interior stays untouched.
 #define CURSOR_RIM_WIDTH   7.0
 #define CURSOR_BACK_LOBE   0.35
-// Additive, because a faint surface (Control Center) has almost no edge light
-// of its own to scale. High because the band it lights is narrow.
-#define CURSOR_GAIN        0.45
+// Additive, but only a touch: the gate above already does the work, and this is
+// just enough to keep the rim readable on the surfaces whose own edge light is
+// faint (Control Center, panel menus).
+#define CURSOR_GAIN        0.12
 // Multiplies the radius the JS sends, and the width of the glow it adds. Both
 // live here on purpose: editing the shader needs a reload, editing the JS needs
 // a logout.
