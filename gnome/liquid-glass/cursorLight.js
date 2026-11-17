@@ -35,14 +35,15 @@ function _apply() {
         // Quick Settings toggles use a class without this setter.
         if (typeof glass.setCursorLight !== 'function')
             return;
-        const [ok, lx, ly] = glass.transform_stage_point(px, py);
-        if (!ok)
+        // Transformed box, not the actor's own size: the menu, Control Center
+        // and notification-centre glasses are a 1x1 actor whose real rect lives
+        // in the dock_* uniforms, so get_size() returned 1 and the uv was junk.
+        const [gx, gy] = glass.get_transformed_position();
+        const [gw, gh] = glass.get_transformed_size();
+        if (!(gw >= 1) || !(gh >= 1))
             return;
-        const [w, h] = glass.get_size();
-        if (!(w >= 1) || !(h >= 1))
-            return;
-        const ux = lx / w;
-        const uy = ly / h;
+        const ux = (px - gx) / gw;
+        const uy = (py - gy) / gh;
         if (sample === null)
             sample = `${ux.toFixed(2)},${uy.toFixed(2)}`;
         const near = ux > -MARGIN && ux < 1 + MARGIN &&
