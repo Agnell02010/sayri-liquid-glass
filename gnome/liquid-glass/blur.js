@@ -234,9 +234,9 @@ export class BlurRenderer {
         }
         this._blurResultTex = this._upTextures[0];
     }
-    // Separable Gaussian on pool level 0 only: a horizontal pass into the temp
-    // texture and a vertical pass into _upTextures[0], with a pre-pass into
-    // _blurTextures[0] only when the region has to be cropped or downscaled.
+    // Separable Gaussian on pool level 0 only: a downsampling pre-pass into
+    // _blurTextures[0], the horizontal pass into the temp texture, and the
+    // vertical pass into _upTextures[0].
     _runGaussianBlur(parentNode, srcTex, srcUV) {
         const tempFbo = this._gaussianTempFbos[0];
         const tempTex = this._gaussianTempTextures[0];
@@ -247,31 +247,19 @@ export class BlurRenderer {
         // At downscale 2 one bilinear fetch averages the 2x2 footprint exactly;
         // at 4 the box filter is needed.
         const wideDownsample = this._blurDownscale >= 4 && this._pipelines.boxDown !== null;
-        // At full resolution the pre-pass is a 1:1 copy: the pool level is the
-        // size of the sampled region, so it neither crops nor rescales. The
-        // horizontal pass can then read the source itself, which is the same
-        // image with one less full-screen draw. A region of another size (a
-        // crop, or any downscale) still needs the copy, so it keeps it.
-        const srcUvW = (srcUV[2] - srcUV[0]) * srcTex.get_width();
-        const srcUvH = (srcUV[3] - srcUV[1]) * srcTex.get_height();
-        const copyIsIdentity = !wideDownsample &&
-            Math.abs(srcUvW - destW) < 0.5 && Math.abs(srcUvH - destH) < 0.5;
-        if (!copyIsIdentity) {
-            const prePipeline = wideDownsample
-                ? this._passes.pipeline('gauss-pre-box', this._pipelines.boxDown)
-                : this._passes.pipeline('gauss-pre', this._pipelines.passthrough);
-            prePipeline.set_layer_texture(0, srcTex);
-            if (wideDownsample) {
-                setPipelineVec2(prePipeline, 'inv_size', 1.0 / srcTex.get_width(), 1.0 / srcTex.get_height());
-            }
-            this._passes.add(parentNode, destFbo, prePipeline, destW, destH, srcUV);
+        const prePipeline = wideDownsample
+            ? this._passes.pipeline('gauss-pre-box', this._pipelines.boxDown)
+            : this._passes.pipeline('gauss-pre', this._pipelines.passthrough);
+        prePipeline.set_layer_texture(0, srcTex);
+        if (wideDownsample) {
+            setPipelineVec2(prePipeline, 'inv_size', 1.0 / srcTex.get_width(), 1.0 / srcTex.get_height());
         }
+        this._passes.add(parentNode, destFbo, prePipeline, destW, destH, srcUV);
         const hPipeline = this._passes.pipeline('gauss-h', this._gaussianHPipeline);
-        hPipeline.set_layer_texture(0, copyIsIdentity ? srcTex : destTex);
+        hPipeline.set_layer_texture(0, destTex);
         setPipelineVec2(hPipeline, 'inv_size', 1.0 / destW, 1.0 / destH);
         setPipelineFloat(hPipeline, 'kernel_scale', this._gaussianScale);
-        this._passes.add(parentNode, tempFbo, hPipeline, destW, destH,
-            copyIsIdentity ? srcUV : [0, 0, 1, 1]);
+        this._passes.add(parentNode, tempFbo, hPipeline, destW, destH, [0, 0, 1, 1]);
         // Not back into destFbo, which the horizontal pass read (see _upTextures).
         const vPipeline = this._passes.pipeline('gauss-v', this._gaussianVPipeline);
         vPipeline.set_layer_texture(0, tempTex);
