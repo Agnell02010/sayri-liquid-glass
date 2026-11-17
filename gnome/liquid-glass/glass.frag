@@ -1041,11 +1041,11 @@ void main() {
     float cursorInBox = step(-0.05, cursor_x) * step(cursor_x, 1.05) *
                         step(-0.05, cursor_y) * step(cursor_y, 1.05);
     float cursorAmount = clamp(cursor_light, 0.0, 1.0) * cursorInBox;
-    // The band on the outline, measured from the box itself so it is always in
-    // pixels: the sign distance d is not in pixels on every path (the dock comes
-    // through the shape texture), and using abs(d) there spread the band across
-    // the whole interior. edgeDistPx is positive inside, negative outside.
-    // box_size is already the half extent: sdRoundRect compares it to abs(p).
+    // The band on the outline: distance to the nearest side of the box, in
+    // pixels, positive inside. box_size is the half extent (sdRoundRect compares
+    // it to abs(local_pos)), so it must not be halved again: doing that put the
+    // band across the middle of the dock.
+    // Also note d above is in pixels too, so the gate and this band agree.
     float edgeDistPx = -max(abs(local_pos.x) - box_size.x,
                             abs(local_pos.y) - box_size.y);
     float cursorEdge = (1.0 - smoothstep(0.0, CURSOR_RIM_WIDTH, edgeDistPx)) * insideMask;
