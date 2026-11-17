@@ -15,8 +15,8 @@
 // live here on purpose: editing the shader needs a reload, editing the JS needs
 // a logout.
 #define CURSOR_REACH_SCALE 1.6
-#define CURSOR_RIM_WIDTH 26.0
-#define CURSOR_GAIN 0.35
+#define CURSOR_RIM_WIDTH 18.0
+#define CURSOR_GAIN 0.16
 #define WIDGET_REFRACT_THICKNESS 35.0  // widget default, px
 #define WIDGET_CHROMA_FRACTION 0.35    // widget: chroma * thickness * 0.35
 uniform sampler2D cogl_sampler0; // Layer 0: the sharp capture
@@ -1028,7 +1028,13 @@ void main() {
     float cursorDistPx = length((uv - vec2(cursor_x, cursor_y)) * resolution);
     float cursorReach = cursor_radius * CURSOR_REACH_SCALE;
     float cursorFalloff = 1.0 - smoothstep(cursorReach * 0.30, cursorReach, cursorDistPx);
-    float cursorAmount = clamp(cursor_light, 0.0, 1.0);
+    // The JS parks the pointer far outside when it leaves a surface, so an
+    // obviously out-of-box position means "no pointer here": the gate has to be
+    // neutral, or every surface would keep the light dimmed forever and the
+    // glow would freeze on the edge nearest to wherever the pointer left.
+    float cursorInBox = step(-0.05, cursor_x) * step(cursor_x, 1.05) *
+                        step(-0.05, cursor_y) * step(cursor_y, 1.05);
+    float cursorAmount = clamp(cursor_light, 0.0, 1.0) * cursorInBox;
     float cursorGate = mix(1.0, mix(CURSOR_MIN_LIGHT, 1.0, cursorFalloff), cursorAmount);
     addedLightVec *= cursorGate;
     // An explicit highlight, additive rather than a gate: the widget's own edge
@@ -1036,8 +1042,11 @@ void main() {
     // anything but the dock. This is a soft glow just inside the outline, only
     // where the pointer is, and it is 0 when the feature is off.
     float cursorInside = 1.0 - smoothstep(0.0, CURSOR_RIM_WIDTH, max(-d, 0.0));
+    // The dock's own rim already responds well through the gate above; adding
+    // the glow there too was what made it far too bright.
+    float cursorGlowDock = (isDock > 0.5) ? 0.0 : 1.0;
     addedLightVec += vec3(1.0, 0.98, 0.94) *
-        (cursorInside * insideMask * cursorFalloff * cursorAmount * CURSOR_GAIN);
+        (cursorInside * insideMask * cursorFalloff * cursorAmount * CURSOR_GAIN * cursorGlowDock);
     addedLight = dot(addedLightVec, vec3(0.2126, 0.7152, 0.0722));
 
     // Screen blend, which cannot blow out a white background the way adding

@@ -46,9 +46,18 @@ Le manopole stanno tutte nello shader, e si cambiano con un reload:
 ```glsl
 #define CURSOR_MIN_LIGHT    0.35   // luce residua quando il cursore e' lontano
 #define CURSOR_REACH_SCALE  1.6    // moltiplica il raggio arrivato dal JS
-#define CURSOR_RIM_WIDTH    26.0   // spessore dell'alone, in px
-#define CURSOR_GAIN         0.35   // intensita' dell'alone
+#define CURSOR_RIM_WIDTH    18.0   // spessore dell'alone, in px
+#define CURSOR_GAIN         0.16   // intensita' dell'alone
 ```
+
+Due dettagli che sono serviti a renderlo usabile:
+
+- **il dock non riceve l'alone**: la sua luce originale risponde gia' bene al
+  cancello, e sommare l'alone lo rendeva troppo luminoso;
+- **il cancello e' neutro se il cursore e' fuori dalla superficie**
+  (`cursorInBox` su uv, margine 0.05). Senza questo la posizione che il JS
+  lascia quando il puntatore esce resta dentro la portata, e l'alone si
+  **congela** sul bordo piu' vicino all'uscita, fermo.
 
 Con `cursor_light = 0` il cancello vale esattamente 1.0, quindi **il solo
 shader è retrocompatibile**: senza il lato JS disegna quello che disegnava
