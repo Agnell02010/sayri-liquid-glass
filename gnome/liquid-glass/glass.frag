@@ -17,7 +17,7 @@
 #define CURSOR_BACK_LOBE   0.35
 // Additive, because a faint surface (Control Center) has almost no edge light
 // of its own to scale. High because the band it lights is narrow.
-#define CURSOR_GAIN        0.95
+#define CURSOR_GAIN        0.45
 // Multiplies the radius the JS sends, and the width of the glow it adds. Both
 // live here on purpose: editing the shader needs a reload, editing the JS needs
 // a logout.
