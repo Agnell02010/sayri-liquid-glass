@@ -1041,10 +1041,14 @@ void main() {
     float cursorInBox = step(-0.05, cursor_x) * step(cursor_x, 1.05) *
                         step(-0.05, cursor_y) * step(cursor_y, 1.05);
     float cursorAmount = clamp(cursor_light, 0.0, 1.0) * cursorInBox;
-    // The band on the outline, shared by the gate and the highlight: the gate
-    // is applied only here, so the interior keeps its own light instead of
-    // lighting up when the pointer passes.
-    float cursorEdge = (1.0 - smoothstep(0.0, CURSOR_RIM_WIDTH, abs(d))) * insideMask;
+    // The band on the outline, measured from the box itself so it is always in
+    // pixels: the sign distance d is not in pixels on every path (the dock comes
+    // through the shape texture), and using abs(d) there spread the band across
+    // the whole interior. edgeDistPx is positive inside, negative outside.
+    vec2 cursorHalfBox = box_size * 0.5;
+    float edgeDistPx = -max(abs(local_pos.x) - cursorHalfBox.x,
+                            abs(local_pos.y) - cursorHalfBox.y);
+    float cursorEdge = (1.0 - smoothstep(0.0, CURSOR_RIM_WIDTH, edgeDistPx)) * insideMask;
     float cursorGate = mix(1.0, mix(CURSOR_MIN_LIGHT, 1.0, cursorFalloff), cursorAmount);
     addedLightVec *= mix(1.0, cursorGate, cursorEdge);
     // surfaceDir points straight out of the outline, so its dot with the
