@@ -8,15 +8,14 @@
 // strength: its widget version washed across the long edge.
 #define DOCK_DISP_BOOST 1.25
 #define DOCK_LIGHT_BOOST 1.15
-// One additive highlight on every surface, dock included, so no surface reads
-// brighter than another. It never takes light away, so the rest of the look is
-// exactly what it was before the pointer arrived.
+// The edge light is scaled by how close the pointer is: full where it is, and
+// CURSOR_MIN_LIGHT far away, so nothing goes completely dark. This is the
+// strength the dock had the first time round.
 // Multiplies the radius the JS sends, and the width of the glow it adds. Both
 // live here on purpose: editing the shader needs a reload, editing the JS needs
 // a logout.
-#define CURSOR_REACH_SCALE 1.6
-#define CURSOR_RIM_WIDTH 20.0
-#define CURSOR_GAIN 0.22
+#define CURSOR_REACH_SCALE 1.0
+#define CURSOR_MIN_LIGHT 0.35
 #define WIDGET_REFRACT_THICKNESS 35.0  // widget default, px
 #define WIDGET_CHROMA_FRACTION 0.35    // widget: chroma * thickness * 0.35
 uniform sampler2D cogl_sampler0; // Layer 0: the sharp capture
@@ -1035,12 +1034,8 @@ void main() {
     float cursorInBox = step(-0.05, cursor_x) * step(cursor_x, 1.05) *
                         step(-0.05, cursor_y) * step(cursor_y, 1.05);
     float cursorAmount = clamp(cursor_light, 0.0, 1.0) * cursorInBox;
-    // One term, additive, the same on every surface: scaling each surface's own
-    // edge light made the dock bright and everything else nearly invisible,
-    // because that light differs by an order of magnitude between them.
-    float cursorInside = 1.0 - smoothstep(0.0, CURSOR_RIM_WIDTH, max(-d, 0.0));
-    addedLightVec += vec3(1.0, 0.98, 0.94) *
-        (cursorInside * insideMask * cursorFalloff * cursorAmount * CURSOR_GAIN);
+    float cursorGate = mix(1.0, mix(CURSOR_MIN_LIGHT, 1.0, cursorFalloff), cursorAmount);
+    addedLightVec *= cursorGate;
     addedLight = dot(addedLightVec, vec3(0.2126, 0.7152, 0.0722));
 
     // Screen blend, which cannot blow out a white background the way adding
